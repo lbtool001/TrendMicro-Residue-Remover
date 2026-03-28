@@ -1,7 +1,20 @@
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+if (-not ([Security.Principal.WindowsPrincipal]
+    [Security.Principal.WindowsIdentity]::GetCurrent()
+).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
     Write-Host "Elevating to Administrator..." -ForegroundColor Cyan
-    $scriptUrl = "https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/refs/heads/main/TrendUninstall.ps1"
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& {$(irm $scriptUrl)}`"" -Verb RunAs
+
+    $scriptUrl = "https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/main/TrendUninstall.ps1"
+    $tempScript = "$env:TEMP\TrendUninstall.ps1"
+
+    Invoke-WebRequest $scriptUrl -OutFile $tempScript -UseBasicParsing
+
+    Start-Process powershell.exe -Verb RunAs -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "`"$tempScript`""
+    )
+
     exit
 }
 
@@ -16,11 +29,9 @@ try {
     Write-Host "Downloading files..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0" -ErrorAction Stop
 
-    $bytes = Get-Content $zipPath -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue
-    if (-not $bytes) { $bytes = Get-Content $zipPath -Encoding Byte -TotalCount 2 } # Compatibility for older PS versions
-    
-    if (-not ($bytes[0] -eq 80 -and $bytes[1] -eq 75)) {
-        throw "The downloaded file is not a valid ZIP. Check your Dropbox link."
+    $firstTwoBytes = Get-Content $zipPath -Encoding Byte -TotalCount 2
+    if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) {
+        throw "Download file is corrupted or not a ZIP file."
     }
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
@@ -28,19 +39,19 @@ try {
 
     $realExePath = Get-ChildItem -Path $destDir -Filter "V1ESUninstallTool.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
 
-    if ($realExePath) {
-        Write-Host "Running Uninstall Tool..." -ForegroundColor Yellow
-        Start-Process -FilePath $realExePath -Wait -PassThru
-
-        Write-Host "`nUninstallation process complete." -ForegroundColor Green
-        $choice = Read-Host "Would you like to delete the temp files at '$destDir'? [Y/N]"
-
-        if ($choice -match "y|Y") {
-            Remove-Item -Path $destDir -Recurse -Force
-            Write-Host "Cleanup successful." -ForegroundColor Gray
-        }
-    } else {
+    if (-not $realExePath) {
         throw "Could not find V1ESUninstallTool.exe inside the ZIP."
+    }
+
+    Write-Host "Running Uninstall Tool..." -ForegroundColor Yellow
+    Start-Process -FilePath $realExePath -Wait
+
+    Write-Host "`nUninstallation process complete." -ForegroundColor Green
+
+    $choice = Read-Host "Would you like to delete the temp files at '$destDir'? [Y/N]"
+    if ($choice -match "^[Yy]$") {
+        Remove-Item -Path $destDir -Recurse -Force
+        Write-Host "Cleanup successful." -ForegroundColor Gray
     }
 }
 catch {
