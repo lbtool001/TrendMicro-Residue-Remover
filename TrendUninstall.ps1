@@ -12,7 +12,7 @@ if (-not (Test-Path $destDir)) {
     New-Item -Path $destDir -ItemType Directory | Out-Null 
 }
 
-Write-Host "Downloading tool..." -ForegroundColor Cyan
+Write-Host "Downloading tool from Google Drive..." -ForegroundColor Cyan
 try {
     Invoke-WebRequest -Uri $url -OutFile $exePath -ErrorAction Stop
 } catch {
@@ -30,7 +30,7 @@ if (Test-Path $exePath) {
     exit
 }
 
-Write-Host "`nUninstallation process complete. Update your sheet now!" -ForegroundColor Green
+Write-Host "`nUninstallation process complete." -ForegroundColor Green
 $choice = Read-Host "Would you like to delete the files and folders at '$destDir'? [Y/N]"
 
 if ($choice -eq "Y") {
