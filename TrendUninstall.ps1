@@ -1,14 +1,10 @@
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = "powershell.exe"
-    $psi.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    $psi.Verb = "runas"
-    try {
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
-    } catch {
-        Write-Host "Elevation canceled. Exiting..." -ForegroundColor Red
-    }
-    exit
+    Write-Host "Restarting script as Administrator..." -ForegroundColor Yellow
+
+    # Restart the current inline script as admin
+    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($($MyInvocation.Line)))
+    Start-Process pwsh -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encodedCommand" -Verb RunAs
+    return
 }
 
 $url = "https://www.dropbox.com/scl/fi/za2w68je3oy0yaksu4hig/V1ESUninstallTool.zip?rlkey=2paxcfiksbtauspboslwlvk4i&st=h9npam3m&dl=1"
@@ -29,9 +25,7 @@ try {
     if ($fileSize -lt 1024) { throw "Downloaded file is too small. Check the Dropbox link or network." }
 
     $firstTwoBytes = Get-Content $zipPath -Encoding Byte -TotalCount 2
-    if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) {
-        throw "The downloaded file is not a valid ZIP archive."
-    }
+    if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) { throw "The downloaded file is not a valid ZIP archive." }
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
     Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
@@ -42,25 +36,27 @@ try {
     Write-Host "Running Uninstall Tool..." -ForegroundColor Yellow
     & $realExePath
 
-    # Move out of C:\Temp before deleting
     Set-Location C:\
-
-    $choice = Read-Host "Uninstallation complete. Delete entire C:\Temp folder? [Y/N]"
-    if ($choice.Trim().ToUpper() -eq "Y") {
-        $deleted = $false
-        for ($i=0; $i -lt 5; $i++) {
-            try {
-                if (Test-Path "C:\Temp") { Remove-Item -Path "C:\Temp" -Recurse -Force }
-                $deleted = $true
-                break
-            } catch {
-                Start-Sleep -Milliseconds 500
+    if (Test-Path "C:\Temp") {
+        $choice = Read-Host "Uninstallation complete. Delete entire C:\Temp folder? [Y/N]"
+        if ($choice.Trim().ToUpper() -eq "Y") {
+            $deleted = $false
+            for ($i=0; $i -lt 5; $i++) {
+                try {
+                    Remove-Item -Path "C:\Temp" -Recurse -Force
+                    $deleted = $true
+                    break
+                } catch {
+                    Start-Sleep -Milliseconds 500
+                }
             }
-        }
-        if ($deleted) {
-            Write-Host "C:\Temp folder and all files deleted successfully." -ForegroundColor Gray
+            if ($deleted) {
+                Write-Host "C:\Temp folder deleted successfully." -ForegroundColor Gray
+            } else {
+                Write-Host "Failed to delete C:\Temp. Some files may still be in use." -ForegroundColor Red
+            }
         } else {
-            Write-Host "Failed to delete C:\Temp. Some files may still be in use." -ForegroundColor Red
+            Write-Host "C:\Temp folder left intact." -ForegroundColor Gray
         }
     }
 
@@ -68,5 +64,4 @@ try {
     Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-Write-Host "`nProcess finished. Press any key to close..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+Write-Host "`nProcess finished." -ForegroundColor Gray
