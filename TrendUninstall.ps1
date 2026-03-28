@@ -1,6 +1,7 @@
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "Elevating to Administrator..." -ForegroundColor Cyan
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -Command `"& {$(Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/refs/heads/main/TrendUninstall.ps1')}`"" -Verb RunAs
+    $scriptUrl = "https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/refs/heads/main/TrendUninstall.ps1"
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& {$(irm $scriptUrl)}`"" -Verb RunAs
     exit
 }
 
@@ -12,12 +13,14 @@ try {
     if (Test-Path $destDir) { Remove-Item $destDir -Recurse -Force }
     New-Item -Path $destDir -ItemType Directory -Force | Out-Null 
 
-    Write-Host "Downloading ZIP from Dropbox..." -ForegroundColor Cyan
+    Write-Host "Downloading files..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0" -ErrorAction Stop
 
-    $firstTwoBytes = Get-Content $zipPath -Encoding Byte -TotalCount 2
-    if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) {
-        throw "The downloaded file is not a valid ZIP archive. Please check the Dropbox link."
+    $bytes = Get-Content $zipPath -AsByteStream -TotalCount 2 -ErrorAction SilentlyContinue
+    if (-not $bytes) { $bytes = Get-Content $zipPath -Encoding Byte -TotalCount 2 } # Compatibility for older PS versions
+    
+    if (-not ($bytes[0] -eq 80 -and $bytes[1] -eq 75)) {
+        throw "The downloaded file is not a valid ZIP. Check your Dropbox link."
     }
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
