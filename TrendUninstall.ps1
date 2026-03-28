@@ -4,7 +4,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
     exit
 }
 
-$url = "https://www.dropbox.com/scl/fi/your_id/V1ESUninstallTool.zip?rlkey=your_key&dl=1"
+$url = "https://www.dropbox.com/scl/fi/za2w68je3oy0yaksu4hig/V1ESUninstallTool.zip?rlkey=2paxcfiksbtauspboslwlvk4i&st=h9npam3m&dl=1"
 $destDir = "C:\Temp\TrendUninstall"
 $zipPath = Join-Path $destDir "V1ESUninstallTool.zip"
 $exePath = Join-Path $destDir "V1ESUninstallTool.exe"
@@ -13,7 +13,7 @@ try {
     if (Test-Path $destDir) { Remove-Item $destDir -Recurse -Force }
     New-Item -Path $destDir -ItemType Directory -Force | Out-Null 
 
-    Write-Host "Downloading ZIP from Dropbox..." -ForegroundColor Cyan
+    Write-Host "Downloading Files..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $url -OutFile $zipPath -ErrorAction Stop
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
@@ -26,7 +26,7 @@ try {
         Start-Process -FilePath $realExePath -Wait -PassThru
 
         Write-Host "`nUninstallation process complete." -ForegroundColor Green
-        $choice = Read-Host "Would you like to delete the downloaded ZIP and all extracted files at '$destDir'? [Y/N]"
+        $choice = Read-Host "Delete files at '$destDir'? [Y/N]"
 
         if ($choice -eq "Y" -or $choice -eq "y") {
             Remove-Item -Path $destDir -Recurse -Force
