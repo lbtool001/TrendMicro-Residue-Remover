@@ -1,9 +1,8 @@
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Host "Restarting script as Administrator..." -ForegroundColor Yellow
-
-    # Restart the current inline script as admin
-    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($($MyInvocation.Line)))
-    Start-Process pwsh -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encodedCommand" -Verb RunAs
+    $psExe = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell.exe" }
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($MyInvocation.Line))
+    Start-Process $psExe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded" -Verb RunAs
     return
 }
 
@@ -12,10 +11,7 @@ $destDir = "C:\Temp\TrendUninstall"
 $zipPath = Join-Path $destDir "V1ESUninstallTool.zip"
 
 try {
-    if (Test-Path $destDir) { 
-        Write-Host "Cleaning existing temp folder..." -ForegroundColor Gray
-        Remove-Item $destDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    if (Test-Path $destDir) { Remove-Item $destDir -Recurse -Force -ErrorAction SilentlyContinue }
     New-Item -Path $destDir -ItemType Directory -Force | Out-Null
 
     Write-Host "Downloading ZIP from Dropbox..." -ForegroundColor Cyan
@@ -46,22 +42,12 @@ try {
                     Remove-Item -Path "C:\Temp" -Recurse -Force
                     $deleted = $true
                     break
-                } catch {
-                    Start-Sleep -Milliseconds 500
-                }
+                } catch { Start-Sleep -Milliseconds 500 }
             }
-            if ($deleted) {
-                Write-Host "C:\Temp folder deleted successfully." -ForegroundColor Gray
-            } else {
-                Write-Host "Failed to delete C:\Temp. Some files may still be in use." -ForegroundColor Red
-            }
-        } else {
-            Write-Host "C:\Temp folder left intact." -ForegroundColor Gray
-        }
+            if ($deleted) { Write-Host "C:\Temp folder deleted successfully." -ForegroundColor Gray } else { Write-Host "Failed to delete C:\Temp. Some files may still be in use." -ForegroundColor Red }
+        } else { Write-Host "C:\Temp folder left intact." -ForegroundColor Gray }
     }
 
-} catch {
-    Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
-}
+} catch { Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red }
 
 Write-Host "`nProcess finished." -ForegroundColor Gray
