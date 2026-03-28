@@ -1,42 +1,65 @@
+$ErrorActionPreference = "Stop"
+
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://raw.githubusercontent.com/yourrepo/script.ps1 | iex`"" -Verb RunAs
+    exit
+}
+
 $url = "https://www.dropbox.com/scl/fi/za2w68je3oy0yaksu4hig/V1ESUninstallTool.zip?rlkey=2paxcfiksbtauspboslwlvk4i&st=h9npam3m&dl=1"
 $destDir = "C:\Temp\TrendUninstall"
 $zipPath = Join-Path $destDir "V1ESUninstallTool.zip"
 
 try {
-    if (Test-Path $destDir) { Remove-Item $destDir -Recurse -Force }
-    New-Item -Path $destDir -ItemType Directory -Force | Out-Null 
 
-    Write-Host "Downloading ZIP from Dropbox..." -ForegroundColor Cyan
-    Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0" -ErrorAction Stop
+    if (Test-Path $destDir) {
+        Remove-Item $destDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
 
-    $firstTwoBytes = Get-Content $zipPath -Encoding Byte -TotalCount 2
-    if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) {
-        throw "The downloaded file is not a valid ZIP archive. Please check the Dropbox link."
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+
+    Write-Host "Downloading uninstall tool..." -ForegroundColor Cyan
+    Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0"
+
+    $fs = [System.IO.File]::OpenRead($zipPath)
+    $bytes = New-Object byte[] 2
+    $fs.Read($bytes, 0, 2) | Out-Null
+    $fs.Close()
+
+    if (-not ($bytes[0] -eq 80 -and $bytes[1] -eq 75)) {
+        throw "Download failed or file is not a valid ZIP."
     }
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
     Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
 
-    $realExePath = Get-ChildItem -Path $destDir -Filter "V1ESUninstallTool.exe" -Recurse | Select-Object -First 1 -ExpandProperty FullName
+    $exe = Get-ChildItem -Path $destDir -Filter "V1ESUninstallTool.exe" -Recurse -ErrorAction SilentlyContinue |
+           Select-Object -First 1 -ExpandProperty FullName
 
-    if ($realExePath) {
-        Write-Host "Running Uninstall Tool..." -ForegroundColor Yellow
-        Start-Process -FilePath $realExePath -Wait -PassThru
-
-        Write-Host "`nUninstallation process complete." -ForegroundColor Green
-        $choice = Read-Host "Would you like to delete the temp files at '$destDir'? [Y/N]"
-
-        if ($choice -match "y|Y") {
-            Remove-Item -Path $destDir -Recurse -Force
-            Write-Host "Cleanup successful." -ForegroundColor Gray
-        }
-    } else {
-        throw "Could not find V1ESUninstallTool.exe inside the ZIP."
+    if (-not $exe) {
+        throw "V1ESUninstallTool.exe not found."
     }
+
+    Write-Host "Launching uninstall tool..." -ForegroundColor Green
+    Start-Process -FilePath $exe -Wait
+
+    Write-Host "`nUninstallation process finished." -ForegroundColor Green
+
+    $choice = Read-Host "Delete temporary files in $destDir ? (Y/N)"
+
+    if ($choice -match "^[Yy]$") {
+        Remove-Item $destDir -Recurse -Force
+        Write-Host "Temporary files deleted." -ForegroundColor Gray
+    }
+    else {
+        Write-Host "Temporary files kept at: $destDir" -ForegroundColor Gray
+    }
+
 }
 catch {
-    Write-Host "`n[ERROR]: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`n[ERROR] $($_.Exception.Message)" -ForegroundColor Red
 }
 
-Write-Host "`nProcess finished. Press any key to close..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+if ($Host.Name -eq "ConsoleHost") {
+    Write-Host "`nPress any key to close..." -ForegroundColor DarkGray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}
