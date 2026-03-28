@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$scriptUrl = "https://raw.githubusercontent.com/yourrepo/script.ps1"
+$scriptUrl = "https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/refs/heads/main/TrendUninstall.ps1"
 
 if (-not ([Security.Principal.WindowsPrincipal]([Security.Principal.WindowsIdentity]::GetCurrent())
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
