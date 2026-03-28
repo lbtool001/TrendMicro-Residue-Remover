@@ -1,15 +1,3 @@
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "Elevating to Administrator..." -ForegroundColor Cyan
-    $argList = "-NoProfile -ExecutionPolicy Bypass"
-    if ($PSCommandPath) {
-        Start-Process powershell.exe -ArgumentList "$argList -File `"$PSCommandPath`"" -Verb RunAs
-    } else {
-        $scriptContent = (Invoke-RestMethod -Uri "https://raw.githubusercontent.com/lbtool001/TrendMicro-Residue-Remover/refs/heads/main/TrendUninstall.ps1")
-        Start-Process powershell.exe -ArgumentList "$argList -Command `"$scriptContent`"" -Verb RunAs
-    }
-    exit
-}
-
 $url = "https://www.dropbox.com/scl/fi/your_id/V1ESUninstallTool.zip?rlkey=your_key&dl=1"
 $destDir = "C:\Temp\TrendUninstall"
 $zipPath = Join-Path $destDir "V1ESUninstallTool.zip"
