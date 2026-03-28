@@ -1,8 +1,13 @@
 $ErrorActionPreference = "Stop"
 
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://raw.githubusercontent.com/yourrepo/script.ps1 | iex`"" -Verb RunAs
-    exit
+$scriptUrl = "https://raw.githubusercontent.com/yourrepo/script.ps1"
+
+if (-not ([Security.Principal.WindowsPrincipal]([Security.Principal.WindowsIdentity]::GetCurrent())
+).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+
+    Write-Host "Requesting administrator permission..." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoExit -ExecutionPolicy Bypass -Command `"irm $scriptUrl | iex`"" -Verb RunAs
+    return
 }
 
 $url = "https://www.dropbox.com/scl/fi/za2w68je3oy0yaksu4hig/V1ESUninstallTool.zip?rlkey=2paxcfiksbtauspboslwlvk4i&st=h9npam3m&dl=1"
@@ -59,7 +64,5 @@ catch {
     Write-Host "`n[ERROR] $($_.Exception.Message)" -ForegroundColor Red
 }
 
-if ($Host.Name -eq "ConsoleHost") {
-    Write-Host "`nPress any key to close..." -ForegroundColor DarkGray
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-}
+Write-Host "`nPress any key to close..." -ForegroundColor DarkGray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
