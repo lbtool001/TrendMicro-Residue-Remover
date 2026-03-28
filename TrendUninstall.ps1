@@ -12,12 +12,12 @@ try {
     if (Test-Path $destDir) { Remove-Item $destDir -Recurse -Force }
     New-Item -Path $destDir -ItemType Directory -Force | Out-Null 
 
-    Write-Host "Downloading files..." -ForegroundColor Cyan
+    Write-Host "Downloading ZIP from Dropbox..." -ForegroundColor Cyan
     Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0" -ErrorAction Stop
 
     $firstTwoBytes = Get-Content $zipPath -Encoding Byte -TotalCount 2
     if (-not ($firstTwoBytes[0] -eq 80 -and $firstTwoBytes[1] -eq 75)) {
-        throw "Download file error!."
+        throw "The downloaded file is not a valid ZIP archive. Please check the Dropbox link."
     }
 
     Write-Host "Extracting files..." -ForegroundColor Magenta
