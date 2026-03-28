@@ -34,7 +34,7 @@ try {
         throw "Download failed or file is not a valid ZIP."
     }
 
-    Write-Host "Extracting files..." -ForegroundColor Magenta
+    Write-Host "Extracting files...." -ForegroundColor Magenta
     Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
 
     $exe = Get-ChildItem -Path $destDir -Filter "V1ESUninstallTool.exe" -Recurse -ErrorAction SilentlyContinue |
