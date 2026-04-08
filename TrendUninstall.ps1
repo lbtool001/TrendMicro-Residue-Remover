@@ -3,7 +3,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     return
 }
 
-$url="https://www.dropbox.com/scl/fi/za2w68je3oy0yaksu4hig/V1ESUninstallTool.zip?rlkey=2paxcfiksbtauspboslwlvk4i&st=h9npam3m&dl=1"
+$url="https://www.dropbox.com/scl/fi/oc5960c0nebynxpomwvhf/V1ESUninstallTool.zip?rlkey=9en7bferg5t7cyw77ucalayb9&st=izcn1n4o&dl=1"
 $destDir="C:\Temp\TrendUninstall"
 $zipPath=Join-Path $destDir "V1ESUninstallTool.zip"
 
