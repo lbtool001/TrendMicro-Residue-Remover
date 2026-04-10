@@ -22,11 +22,7 @@ if (-not $isAdmin) {
         "-File `"$PSCommandPath`""
     }
     else {
-        $encoded = [Convert]::ToBase64String(
-            [Text.Encoding]::Unicode.GetBytes((Invoke-WebRequest 'https://tinyurl.com/tmremover').Content)
-        )
-
-        "-EncodedCommand $encoded"
+        "-Command `"irm 'https://tinyurl.com/tmremover' | iex`""
     }
 
     Start-Process powershell.exe -Verb RunAs -ArgumentList @(
@@ -78,6 +74,13 @@ function Log($msg) {
     $logBox.AppendText("`r`n$msg")
 }
 
+function Download-File($url, $outFile) {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    $ProgressPreference = 'SilentlyContinue'
+
+    Invoke-WebRequest -Uri $url -OutFile $outFile -UseBasicParsing -ErrorAction Stop
+}
+
 $button1 = New-Object System.Windows.Forms.Button
 $button1.Text = "TMREMOVE"
 $button1.Size = New-Object System.Drawing.Size(140, 45)
@@ -91,7 +94,6 @@ $button1.Add_Click({
     Log "Starting TMREMOVE process..."
 
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
         $url = "https://www.dropbox.com/scl/fi/oc5960c0nebynxpomwvhf/V1ESUninstallTool.zip?rlkey=9en7bferg5t7cyw77ucalayb9&st=izcn1n4o&dl=1"
         $destDir = "C:\Temp\TrendUninstall"
@@ -103,9 +105,9 @@ $button1.Add_Click({
         }
 
         New-Item -Path $destDir -ItemType Directory -Force | Out-Null
-        Log "Downloading TM removal tool! Please wait....."
+        Log "Downloading TM removal tool..."
 
-        Invoke-WebRequest -Uri $url -OutFile $zipPath -UserAgent "Mozilla/5.0" -ErrorAction Stop
+        Download-File $url $zipPath
 
         Log "Extracting archive..."
         Expand-Archive -Path $zipPath -DestinationPath $destDir -Force
@@ -117,31 +119,11 @@ $button1.Add_Click({
             throw "V1ESUninstallTool.exe not found."
         }
 
-        Log "Running V1ESUninstallTool.exe..."
+        Log "Running tool..."
 
-        $outLog = Join-Path $destDir "stdout.log"
-        $errLog = Join-Path $destDir "stderr.log"
+        Start-Process -FilePath $exe -WindowStyle Hidden
 
-        $proc = Start-Process -FilePath $exe `
-            -WindowStyle Hidden `
-            -PassThru `
-            -RedirectStandardOutput $outLog `
-            -RedirectStandardError $errLog `
-            -Wait
-
-        if (Test-Path $outLog) {
-            Get-Content $outLog -ErrorAction SilentlyContinue | ForEach-Object {
-                Log "[OUT] $_"
-            }
-        }
-
-        if (Test-Path $errLog) {
-            Get-Content $errLog -ErrorAction SilentlyContinue | ForEach-Object {
-                Log "[ERR] $_"
-            }
-        }
-
-        Log "TMREMOVE completed successfully."
+        Log "TMREMOVE completed."
 
     } catch {
         Log "[ERROR] $($_.Exception.Message)"
@@ -161,6 +143,7 @@ $button2.Add_Click({
     Log "Starting BitDefender installation..."
 
     try {
+
         $url = "https://cloudap.gravityzone.bitdefender.com/Packages/BSTWIN/0/setupdownloader_[aHR0cHM6Ly9jbG91ZGFwLWVjcy5ncmF2aXR5em9uZS5iaXRkZWZlbmRlci5jb20vUGFja2FnZXMvQlNUV0lOLzAvUlp3Y2t4L2luc3RhbGxlci54bWw-bGFuZz1lbi1VUw==].exe"
 
         $downloads = Join-Path ([Environment]::GetFolderPath("UserProfile")) "Downloads\BitDefender"
@@ -178,7 +161,7 @@ $button2.Add_Click({
             Remove-Item $tempPath -Force -ErrorAction SilentlyContinue
         }
 
-        Invoke-WebRequest -Uri $url -OutFile $tempPath -UserAgent "Mozilla/5.0" -MaximumRedirection 10 -ErrorAction Stop
+        Download-File $url $tempPath
 
         $size = (Get-Item $tempPath).Length
         Log "Downloaded size: $size bytes"
@@ -194,11 +177,10 @@ $button2.Add_Click({
 
         Move-Item $tempPath $finalPath -Force
 
-        Log "Launching installer UI..."
-
+        Log "Launching installer..."
         Start-Process -FilePath $finalPath -WindowStyle Normal
 
-        Log "Installer opened. Manual installation required."
+        Log "Installer opened."
 
     } catch {
         Log "[ERROR] $($_.Exception.Message)"
@@ -212,7 +194,3 @@ $form.Controls.Add($button1)
 $form.Controls.Add($button2)
 
 [void]$form.ShowDialog()
-[System.Windows.Forms.Application]::Exit()
-while ($true) {
-    Start-Sleep -Seconds 10
-}
