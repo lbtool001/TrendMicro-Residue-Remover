@@ -1,15 +1,9 @@
-# ==============================
-# SAFETY: NEVER AUTO-CLOSE SILENTLY
-# ==============================
 $ErrorActionPreference = "Continue"
 
 function Write-Log($msg) {
     try { $logBox.AppendText("`r`n$msg") } catch {}
 }
 
-# ==============================
-# LOAD WINFORMS
-# ==============================
 try {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
@@ -18,9 +12,6 @@ try {
     return
 }
 
-# ==============================
-# ADMIN CHECK (IRM SAFE)
-# ==============================
 $isAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -39,9 +30,6 @@ if (-not $isAdmin) {
     return
 }
 
-# ==============================
-# FORM
-# ==============================
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "TSS TOOL"
 $form.Size = New-Object System.Drawing.Size(520, 380)
