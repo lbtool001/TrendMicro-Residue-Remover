@@ -119,11 +119,44 @@ $button1.Add_Click({
             throw "V1ESUninstallTool.exe not found."
         }
 
-        Log "Running tool..."
+        Log "Running tool (capturing output)..."
 
-        Start-Process -FilePath $exe -WindowStyle Hidden
+$proc = New-Object System.Diagnostics.Process
+$proc.StartInfo.FileName = $exe
+$proc.StartInfo.UseShellExecute = $false
+$proc.StartInfo.RedirectStandardOutput = $true
+$proc.StartInfo.RedirectStandardError = $true
+$proc.StartInfo.CreateNoWindow = $true
 
-        Log "TMREMOVE completed."
+$proc.StartInfo.WorkingDirectory = Split-Path $exe
+
+$proc.Start()
+
+while (-not $proc.HasExited) {
+
+    while (-not $proc.StandardOutput.EndOfStream) {
+        $line = $proc.StandardOutput.ReadLine()
+        if ($line) { Log "[OUT] $line" }
+    }
+
+    while (-not $proc.StandardError.EndOfStream) {
+        $line = $proc.StandardError.ReadLine()
+        if ($line) { Log "[ERR] $line" }
+    }
+
+    Start-Sleep -Milliseconds 200
+}
+
+# flush remaining output
+while (-not $proc.StandardOutput.EndOfStream) {
+    Log "[OUT] " + $proc.StandardOutput.ReadLine()
+}
+
+while (-not $proc.StandardError.EndOfStream) {
+    Log "[ERR] " + $proc.StandardError.ReadLine()
+}
+
+Log "TMREMOVE completed."
 
     } catch {
         Log "[ERROR] $($_.Exception.Message)"
