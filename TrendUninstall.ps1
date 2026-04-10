@@ -1,27 +1,22 @@
-if ([Threading.Thread]::CurrentThread.ApartmentState -ne 'STA') {
+$ErrorActionPreference = "Stop"
+
+if ([Threading.Thread]::CurrentThread.ApartmentState -ne "STA") {
     Start-Process powershell.exe "-STA -ExecutionPolicy Bypass -File `"$PSCommandPath`""
     exit
 }
-
-Add-Type -Name Win32 -Namespace Native -MemberDefinition @"
-[DllImport("kernel32.dll")]
-public static extern IntPtr GetConsoleWindow();
-
-[DllImport("user32.dll")]
-public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-"@
-
-$hWnd = [Native.Win32]::GetConsoleWindow()
-[Native.Win32]::ShowWindow($hWnd, 0)
-
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
 
 $isAdmin = ([Security.Principal.WindowsPrincipal] `
     [Security.Principal.WindowsIdentity]::GetCurrent()
 ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $isAdmin) {
+
+    if (-not $PSCommandPath) {
+        Write-Host "ERROR: Save script as .ps1 file first, then run it." -ForegroundColor Red
+        pause
+        exit
+    }
+
     Start-Process powershell.exe -Verb RunAs -ArgumentList @(
         "-NoProfile",
         "-ExecutionPolicy Bypass",
